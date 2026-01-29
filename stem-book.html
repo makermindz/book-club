@@ -30,9 +30,9 @@
     </script>
     <style>
         body {
-            background-color: #2c3e50;
-            background-image: radial-gradient(#34495e 1px, transparent 1px);
-            background-size: 20px 20px;
+            background-color: #ffffff;
+            /* background-image: radial-gradient(#34495e 1px, transparent 1px);
+            background-size: 20px 20px; */
         }
         
         .book-container {
@@ -113,14 +113,14 @@
                         ← Previous
                     </button>
                     <button onclick="Book.nextPage()" id="btn-next" class="flex-1 px-4 py-3 rounded-lg bg-green-primary text-white font-bold hover:bg-green-secondary shadow-lg transition transform hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed">
-                        Next Page →
+                        Next <br> →
                     </button>
                 </div>
             </div>
 
             <!-- Right Side: Interactive Simulation -->
             <div class="w-full md:w-2/3 bg-green-light relative p-6 flex flex-col items-center justify-center">
-                <div class="absolute top-4 right-4 text-gray-500 text-s font-sans z-20">
+                <div class="absolute top-4 right-4 text-black text-s font-sans z-20">
                     &copy; Maker Mindz
                 </div>
                 <div class="absolute top-6 right-6 text-brand-dark opacity-10 text-9xl font-serif font-bold select-none">
@@ -151,7 +151,7 @@
                 title: "The Quest for the Lost Spark",
                 text: "Welcome to a world powered by Science, Technology, Engineering, and Math. Join Alex on her journey to restore energy to Technopolis. This interactive book will test your knowledge and skills!",
                 simType: "cover",
-                instruction: "Enjoy the view and click 'Next Page' to begin."
+                instruction: "Enjoy the view and click 'Next' to begin."
             },
             {
                 title: "The Quest Begins",
@@ -332,7 +332,7 @@
                 if (this.currentPage === Pages.length - 1) {
                     document.getElementById('btn-next').textContent = "Restart";
                 } else {
-                    document.getElementById('btn-next').textContent = "Next Page →";
+                    document.getElementById('btn-next').innerHTML = "Next <br> →";
                 }
 
                 // Load Simulation
