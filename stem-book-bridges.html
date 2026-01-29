@@ -30,9 +30,9 @@
     </script>
     <style>
         body {
-            background-color: #2c3e50;
-            background-image: radial-gradient(#34495e 1px, transparent 1px);
-            background-size: 20px 20px;
+            background-color: #ffffff;
+            /* background-image: radial-gradient(#34495e 1px, transparent 1px);
+            background-size: 20px 20px; */
         }
         
         .book-container {
@@ -112,14 +112,14 @@
                         ← Previous
                     </button>
                     <button onclick="Book.nextPage()" id="btn-next" class="flex-1 px-4 py-3 rounded-lg bg-green-primary text-white font-bold hover:bg-green-secondary shadow-lg transition transform hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed">
-                        Next Page →
+                        Next <br> →
                     </button>
                 </div>
             </div>
 
             <!-- Right Side: Interactive Simulation -->
             <div class="w-full md:w-2/3 bg-green-light relative p-6 flex flex-col items-center justify-center">
-                <div class="absolute top-4 right-4 text-gray-500 text-s font-sans z-20">
+                <div class="absolute top-4 right-4 text-black text-s font-sans z-20">
                     &copy; Maker Mindz
                 </div>
                 <div class="absolute top-6 right-6 text-brand-dark opacity-10 text-9xl font-serif font-bold select-none">
@@ -150,7 +150,7 @@
                 title: "The Bridge Master's Handbook",
                 text: "Welcome, Apprentice! You are about to embark on a journey through the art and science of Bridge Engineering. From simple logs to massive steel giants, bridges connect our world. Are you ready to earn your title as a Master Builder?",
                 simType: "cover",
-                instruction: "Click 'Next Page' to begin your training."
+                instruction: "Click 'Next' to begin your training."
             },
             {
                 title: "The Problem: The Gap",
@@ -264,7 +264,7 @@
                 title: "Cantilever Bridges",
                 text: "A cantilever is a beam supported only on one end, like a diving board. Cantilever bridges use two arms reaching out from opposite sides to meet in the middle.",
                 simType: "cantilever",
-                instruction: "Balance the cantilever arms by adding weight to the anchor arms."
+                instruction: "Adjust the Anchor Weight to support the bridge, then send the truck across."
             },
             {
                 title: "Moveable Bridges",
@@ -331,7 +331,7 @@
                 if (this.currentPage === Pages.length - 1) {
                     document.getElementById('btn-next').textContent = "Restart";
                 } else {
-                    document.getElementById('btn-next').textContent = "Next Page →";
+                    document.getElementById('btn-next').innerHTML = "Next <br> →";
                 }
 
                 // Load Simulation
@@ -1133,28 +1133,161 @@
             // 20. CANTILEVER
             cantilever: {
                 init: function(sim) {
-                    sim.state = { weight: 0 };
+                    sim.state = { counterweight: 50, truckX: 0, collapsed: false };
+                    
+                    // Update controls
                     document.getElementById('sim-controls').innerHTML = `
-                        <div class="flex items-center gap-4"><span class="font-bold">Counterweight:</span><input type="range" min="0" max="100" value="0" class="flex-1" oninput="Simulations.state.weight=parseInt(this.value)"></div>
+                        <div class="flex flex-col gap-2">
+                            <div class="flex items-center gap-4">
+                                <span class="font-bold w-32">Anchor Weight:</span>
+                                <input type="range" min="0" max="100" value="50" class="flex-1" oninput="Simulations.state.counterweight=parseInt(this.value)">
+                            </div>
+                            <button onclick="Simulations.state.truckX=0; Simulations.state.collapsed=false;" class="px-4 py-2 bg-blue-600 text-white rounded font-bold self-center">Send Truck</button>
+                        </div>
                     `;
 
                     sim.loop = () => {
                         const ctx = sim.ctx;
                         ctx.clearRect(0,0,600,350);
                         
-                        // Pier
-                        ctx.fillStyle = '#7f8c8d'; ctx.fillRect(280, 200, 40, 150);
+                        // Water
+                        ctx.fillStyle = '#3498db'; ctx.fillRect(0, 300, 600, 50);
+                        
+                        // Piers
+                        ctx.fillStyle = '#7f8c8d'; 
+                        ctx.fillRect(140, 200, 20, 100); // Left Pier
+                        ctx.fillRect(440, 200, 20, 100); // Right Pier
 
-                        // Arm
+                        // Physics Logic
+                        // Ideal counterweight to hold the suspended span + truck
+                        // Let's say suspended span weighs 20. Truck weighs 30.
+                        // Arms are balanced by themselves.
+                        // When truck is in center (suspended span), load is high.
+                        
+                        const truckLoad = (sim.state.truckX > 250 && sim.state.truckX < 350) ? 1 : 0;
+                        // Moment balance: 
+                        // Anchor Arm * Counterweight = Cantilever Arm * (Self + Span/2 + Truck/2)
+                        // Simplified: Required CW increases as truck moves to center.
+                        
+                        let requiredCW = 30; // Base for span
+                        if (sim.state.truckX > 150 && sim.state.truckX < 450) {
+                            // Truck contributes to moment
+                            // Max requirement when truck is at tip of cantilever or on suspended span
+                            requiredCW = 60; 
+                        }
+                        
+                        let angle = 0;
+                        if (sim.state.counterweight < requiredCW && sim.state.truckX > 150 && sim.state.truckX < 450) {
+                            // Tipping inward
+                            angle = (requiredCW - sim.state.counterweight) * 0.005;
+                            if (angle > 0.2) sim.state.collapsed = true;
+                        } else if (sim.state.counterweight > 80) {
+                             // Tipping outward (too much counterweight)
+                             angle = -(sim.state.counterweight - 80) * 0.005;
+                        }
+                        
+                        if (sim.state.collapsed) angle = 0.3; // Fully collapsed
+
+                        // Draw Left Cantilever
                         ctx.save();
-                        ctx.translate(300, 200);
-                        const angle = (50 - sim.state.weight) * 0.005; // Balance logic
+                        ctx.translate(150, 200);
                         ctx.rotate(angle);
-                        ctx.fillStyle = '#e67e22'; ctx.fillRect(-150, -10, 300, 20);
+                        
+                        // Truss structure (simplified)
+                        ctx.strokeStyle = '#2c3e50'; ctx.lineWidth = 3;
+                        ctx.beginPath();
+                        ctx.moveTo(-100, 0); ctx.lineTo(100, 0); // Deck level
+                        ctx.moveTo(-100, -50); ctx.lineTo(100, -50); // Top chord
+                        ctx.lineTo(100, 0); ctx.lineTo(0, -80); ctx.lineTo(-100, 0); // Tower/Web
+                        ctx.moveTo(-100, 0); ctx.lineTo(-100, -50);
+                        ctx.stroke();
+                        
+                        // Counterweight box
+                        ctx.fillStyle = '#e67e22';
+                        const cwSize = 10 + sim.state.counterweight / 2;
+                        ctx.fillRect(-100 - cwSize/2, -20, cwSize, 40);
+                        
                         ctx.restore();
 
-                        if(Math.abs(angle) < 0.05) document.getElementById('sim-feedback').textContent = "Balanced!";
-                        else document.getElementById('sim-feedback').textContent = "Unbalanced.";
+                        // Draw Right Cantilever
+                        ctx.save();
+                        ctx.translate(450, 200);
+                        ctx.rotate(-angle); // Rotates opposite way
+                        
+                        ctx.strokeStyle = '#2c3e50'; ctx.lineWidth = 3;
+                        ctx.beginPath();
+                        ctx.moveTo(-100, 0); ctx.lineTo(100, 0);
+                        ctx.moveTo(-100, -50); ctx.lineTo(100, -50);
+                        ctx.lineTo(100, 0); ctx.lineTo(0, -80); ctx.lineTo(-100, 0);
+                        ctx.moveTo(100, 0); ctx.lineTo(100, -50);
+                        ctx.moveTo(-100, 0); ctx.lineTo(-100, -50);
+                        ctx.stroke();
+
+                        // Counterweight box
+                        ctx.fillStyle = '#e67e22';
+                        ctx.fillRect(100 - cwSize/2, -20, cwSize, 40);
+
+                        ctx.restore();
+
+                        // Suspended Span (Center)
+                        ctx.save();
+                        // Position depends on tips of cantilevers
+                        // Left tip: 150 + 100*cos(angle), 200 + 100*sin(angle)
+                        // Right tip: 450 - 100*cos(angle), 200 + 100*sin(angle)
+                        const lx = 150 + 100 * Math.cos(angle);
+                        const ly = 200 + 100 * Math.sin(angle);
+                        const rx = 450 - 100 * Math.cos(angle);
+                        const ry = 200 + 100 * Math.sin(angle);
+                        
+                        ctx.strokeStyle = '#27ae60'; ctx.lineWidth = 4;
+                        ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(rx, ry); ctx.stroke();
+                        ctx.restore();
+
+                        // Truck
+                        if (!sim.state.collapsed) {
+                            sim.state.truckX += 2;
+                            if (sim.state.truckX > 650) sim.state.truckX = -50;
+                        }
+                        
+                        // Calculate Truck Y based on bridge geometry
+                        let ty = 200;
+                        if (sim.state.truckX < 150) {
+                            // Approach (flat) - assuming abutment exists or just flying in
+                            ty = 200; 
+                        } else if (sim.state.truckX >= 150 && sim.state.truckX <= 250) {
+                            // Left Cantilever Deck
+                            // Relative x from pivot
+                            const relX = sim.state.truckX - 150;
+                            ty = 200 + relX * Math.sin(angle);
+                        } else if (sim.state.truckX > 250 && sim.state.truckX < 350) {
+                            // Suspended Span
+                            // Interpolate between tips
+                            const t = (sim.state.truckX - 250) / 100;
+                            ty = ly + (ry - ly) * t;
+                        } else if (sim.state.truckX >= 350 && sim.state.truckX <= 450) {
+                            // Right Cantilever Deck
+                            const relX = 450 - sim.state.truckX;
+                            ty = 200 + relX * Math.sin(angle);
+                        }
+                        
+                        if (sim.state.collapsed) ty += 50; // Fall if collapsed
+
+                        ctx.fillStyle = '#c0392b';
+                        ctx.fillRect(sim.state.truckX - 15, ty - 20, 30, 15);
+                        ctx.fill
+                        ctx.fillStyle = '#000';
+                        ctx.beginPath(); ctx.arc(sim.state.truckX - 10, ty - 5, 5, 0, Math.PI*2); ctx.fill();
+                        ctx.beginPath(); ctx.arc(sim.state.truckX + 10, ty - 5, 5, 0, Math.PI*2); ctx.fill();
+                        if (sim.state.collapsed) {
+                            document.getElementById('sim-feedback').textContent = "Bridge Collapsed! Increase Counterweight.";
+                            document.getElementById('sim-feedback').className = "mt-3 text-center font-bold text-red-600";
+                        } else if (Math.abs(angle) > 0.05) {
+                            document.getElementById('sim-feedback').textContent = "Unstable!";
+                            document.getElementById('sim-feedback').className = "mt-3 text-center font-bold text-orange-500";
+                        } else {
+                            document.getElementById('sim-feedback').textContent = "Bridge Stable.";
+                            document.getElementById('sim-feedback').className = "mt-3 text-center font-bold text-green-primary";
+                        }
 
                         sim.animId = requestAnimationFrame(sim.loop);
                     };
@@ -1361,11 +1494,12 @@
                             ctx.save();
                             ctx.translate(450, 250);
                             ctx.rotate(-0.2);
-                            ctx.beginPath(); ctx.arc(0,0,50,0,Math.PI*2);
+                            ctx.beginPath(); ctx.arc(0,0,60,0,Math.PI*2);
                             ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 5; ctx.stroke();
                             ctx.fillStyle = 'rgba(192, 57, 43, 0.1)'; ctx.fill();
                             ctx.fillStyle = '#c0392b'; ctx.font = 'bold 20px sans-serif';
-                            ctx.fillText("APPROVED", 0, 5);
+                            ctx.textBaseline = 'middle';
+                            ctx.fillText("APPROVED", 0, 0);
                             ctx.restore();
                             document.getElementById('sim-feedback').textContent = "Certified!";
                         } else {
@@ -1576,16 +1710,32 @@
                     ctx.beginPath(); ctx.moveTo(xR, yR); ctx.lineTo(xR + 15 * Math.cos(tanR + 2.6), yR + 15 * Math.sin(tanR + 2.6)); ctx.stroke();
                     ctx.beginPath(); ctx.moveTo(xR, yR); ctx.lineTo(xR + 15 * Math.cos(tanR - 2.6), yR + 15 * Math.sin(tanR - 2.6)); ctx.stroke();
 
+                    // New Left Arrow (Opposite)
+                    ctx.beginPath(); ctx.arc(300, 300, 150, endL, startL, false); ctx.stroke();
+                    // Arrowhead New Left
+                    const xL2 = 300 + 150 * Math.cos(startL); const yL2 = 300 + 150 * Math.sin(startL);
+                    const tanL2 = startL + Math.PI / 2;
+                    ctx.beginPath(); ctx.moveTo(xL2, yL2); ctx.lineTo(xL2 + 15 * Math.cos(tanL2 + 2.6), yL2 + 15 * Math.sin(tanL2 + 2.6)); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(xL2, yL2); ctx.lineTo(xL2 + 15 * Math.cos(tanL2 - 2.6), yL2 + 15 * Math.sin(tanL2 - 2.6)); ctx.stroke();
+
+                    // New Right Arrow (Opposite)
+                    ctx.beginPath(); ctx.arc(300, 300, 150, endR, startR, true); ctx.stroke();
+                    // Arrowhead New Right
+                    const xR2 = 300 + 150 * Math.cos(startR); const yR2 = 300 + 150 * Math.sin(startR);
+                    const tanR2 = startR - Math.PI / 2;
+                    ctx.beginPath(); ctx.moveTo(xR2, yR2); ctx.lineTo(xR2 + 15 * Math.cos(tanR2 + 2.6), yR2 + 15 * Math.sin(tanR2 + 2.6)); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(xR2, yR2); ctx.lineTo(xR2 + 15 * Math.cos(tanR2 - 2.6), yR2 + 15 * Math.sin(tanR2 - 2.6)); ctx.stroke();
+
                     ctx.fillStyle = '#e74c3c';
                     ctx.fillText("Compression", 180, 200);
                     ctx.fillText("Compression", 420, 200);
 
-                    // Thrust
-                    ctx.fillText("Thrust", 100, 280);
-                    ctx.beginPath(); ctx.moveTo(150, 300); ctx.lineTo(100, 300); ctx.lineTo(110, 290); ctx.moveTo(100, 300); ctx.lineTo(110, 310); ctx.stroke();
+                    // // Thrust
+                    // ctx.fillText("Thrust", 100, 280);
+                    // ctx.beginPath(); ctx.moveTo(150, 300); ctx.lineTo(100, 300); ctx.lineTo(110, 290); ctx.moveTo(100, 300); ctx.lineTo(110, 310); ctx.stroke();
                     
-                    ctx.fillText("Thrust", 500, 280);
-                    ctx.beginPath(); ctx.moveTo(450, 300); ctx.lineTo(500, 300); ctx.lineTo(490, 290); ctx.moveTo(500, 300); ctx.lineTo(490, 310); ctx.stroke();
+                    // ctx.fillText("Thrust", 500, 280);
+                    // ctx.beginPath(); ctx.moveTo(450, 300); ctx.lineTo(500, 300); ctx.lineTo(490, 290); ctx.moveTo(500, 300); ctx.lineTo(490, 310); ctx.stroke();
                 }
             },
             suspension_static: {
