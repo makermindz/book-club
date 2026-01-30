@@ -32,23 +32,29 @@
         .page-container {
             display: flex;
             width: 100%;
-            max-width: 1024px; /* Matches stem-book.html exact width */
-            height: 90vh; /* Matches stem-book.html exact height */
+            max-width: 1024px;
+            height: 90vh;
             background-color: #04234a;
-            border-radius: 10px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+            border-radius: 0 10px 10px 0; /* Rounded on the right side only */
+            /* This shadow mimics the depth of a thick book */
+            box-shadow: 0 20px 30px -10px rgba(0, 0, 0, 0.5), 10px 0 20px rgba(0,0,0,0.2);
             position: relative;
             overflow: hidden;
+            /* Added the spine border here */
+            border-left: 10px solid #02152d;
         }
 
         .left-page {
-            flex: 0 0 33.333%; /* Matches original stem-book layout ratio */
+            flex: 0 0 33.333%;
             padding: 2.5rem;
-            border-right: 1px solid rgba(255,255,255,0.1);
+            /* This creates the "fold" line in the middle of the book */
+            border-right: 2px solid rgba(0,0,0,0.3);
             display: flex;
             flex-direction: column;
             justify-content: center;
-            background: linear-gradient(to right, #04234a 99%, #062d5e 100%);
+            background: linear-gradient(to right, #04234a 95%, #031b3a 100%);
+            /* Adds a slight inner shadow to simulate the page curving into the spine */
+            box-shadow: inset 15px 0 20px -10px rgba(0,0,0,0.5);
         }
 
         .right-page {
